@@ -1,0 +1,58 @@
+# Mar-31-2025
+# compare_shapes.py
+
+import sys
+import cv2 as cv
+
+from max3.src import cfg_max3
+from max3.src.to_canonical import to_canonical
+from max3.src.calc import calc
+from max3.src.draw_canonical import draw_canonical
+
+
+def compare_shapes(path_image: str, path_templ: str) -> (float, float):
+
+    if cfg_max3.just_once:
+        set_params(15, 100, 2048, 0.333)
+        cfg_max3.just_once = False
+
+    image_gray = cv.imread(path_image, cv.IMREAD_GRAYSCALE)
+    if image_gray is None:
+        print(f'\nERROR: Unable to read {path_image}.')
+        sys.exit(1)
+
+    templ_gray = cv.imread(path_templ, cv.IMREAD_GRAYSCALE)
+    if templ_gray is None:
+        print(f'\nERROR: Unable to read {path_templ}.')
+        sys.exit(1)
+
+    image_canon = to_canonical(image_gray)
+    templ_canon = to_canonical(templ_gray)
+
+    if cfg_max3.debug_mode:
+        draw_canonical(image_canon, templ_canon)
+
+    distance, similarity = calc(image_canon, templ_canon)
+
+    return distance, similarity
+
+
+def set_params(n_peaks: int, canonical_size: int, size_dft: int, cutoff: float):
+
+    cfg_max3.n_peaks = n_peaks
+    cfg_max3.canonical_size = canonical_size
+    cfg_max3.size_dft = size_dft
+    cfg_max3.cutoff = cutoff
+
+    temp = int(cfg_max3.size_dft * cfg_max3.cutoff)
+    if temp % 2:
+        cfg_max3.size_roi = temp - 1
+    else:
+        cfg_max3.size_roi = temp
+
+    cfg_max3.dsize_roi = (cfg_max3.size_roi, cfg_max3.size_roi)
+    cfg_max3.size_roi_half = cfg_max3.size_roi // 2
+    cfg_max3.X0 = cfg_max3.size_roi_half
+    cfg_max3.Y0 = cfg_max3.size_roi_half
+    cfg_max3.center = (cfg_max3.X0, cfg_max3.Y0)
+
